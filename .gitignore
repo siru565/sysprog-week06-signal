@@ -2,3 +2,5 @@
 alarm
 3_signal_block2
 *.o
+cmake-build-*/
+.idea/
