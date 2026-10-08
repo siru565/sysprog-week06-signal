@@ -1,59 +1,49 @@
 /*
- * 3_signal_block2.c — SIGINT 를 잠깐 막았다가 풀어 보기
+ * 3_signal_block.c — 잠깐 시그널을 막아 둔다
  *
- * 원본 3_signal_block.c 에서 바꾼 것:
- *   - 막혀 있는 동안 1초마다 sigpending 으로 "SIGINT 가 와서 대기 중인지" 찍어 봄
- *   - 플래그 대신 카운터를 써서, 풀었을 때 핸들러가 몇 번 도는지 확인
+ * [핵심 개념]
+ *   중요한 작업 도중에 시그널이 끼어들면 안 될 때가 있다.
+ *   sigprocmask 로 특정 시그널을 "블록"하면 그동안 오는 시그널은
+ *   버려지지 않고 대기(pending)했다가, 풀어 주는 순간 전달된다.
+ *   출처: man 2 sigprocmask
  *
- * 흐름:  sigprocmask(SIG_BLOCK) → 작업 → sigprocmask(SIG_SETMASK, &old) 로 복원
- *
- * 컴파일:  gcc -Wall -Wextra -o 3_signal_block2 3_signal_block2.c
- * 실행:    ./3_signal_block2   (5초 동안 Ctrl+C 여러 번)
+ * [컴파일·실행]
+ *   gcc -Wall -Wextra -o 3_signal_block 3_signal_block.c
+ *   ./3_signal_block      # 막혀 있는 5초 동안 Ctrl+C 를 눌러 본다
  */
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
 
-#define BLOCK_SECS 5
+static volatile sig_atomic_t got = 0;
 
-static volatile sig_atomic_t delivered = 0;   /* 핸들러가 실제로 실행된 횟수 */
-
-static void handler(int sig) { (void)sig; delivered++; }
+static void handler(int sig) { (void)sig; got = 1; }
 
 int main(void)
 {
     struct sigaction sa;
-    sa.sa_handler = handler;    /* 핸들러 등록. 막는 것과는 별개입니다 */
+    sa.sa_handler = handler;   /* SIGINT 가 오면 이 함수를 부르도록 등록 (블록 여부와는 별개다) */
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
-    if (sigaction(SIGINT, &sa, NULL) == -1) {
-        perror("sigaction");
-        return 1;
-    }
+    sigaction(SIGINT, &sa, NULL);
 
-    sigset_t block, old, pending;
-    sigemptyset(&block);            /* 집합 비우기 (안 하면 쓰레기값) */
-    sigaddset(&block, SIGINT);      /* SIGINT 만 넣기 */
+    sigset_t block, old;
+    sigemptyset(&block);            /* 빈 집합에서 시작 */
+    sigaddset(&block, SIGINT);      /* SIGINT 하나만 넣는다 */
 
-    /* SIG_BLOCK: 지금 마스크에 추가로 막습니다. 원래 마스크는 old 에 저장됩니다 */
+    /* SIG_BLOCK: 지금 마스크에 추가로 막는다. old 에는 원래 마스크가 저장된다. */
     if (sigprocmask(SIG_BLOCK, &block, &old) == -1) {
         perror("sigprocmask");
         return 1;
     }
 
-    printf("%d초 동안 SIGINT 를 막습니다. Ctrl+C 를 여러 번 눌러 보세요. (PID %d)\n", BLOCK_SECS, getpid());
-    for (int i = 1; i <= BLOCK_SECS; i++) {
-        sleep(1);
-        sigpending(&pending);   /* 지금 대기 중인 시그널 집합 */
-        printf("  [%d초] 핸들러 실행 %d회 | SIGINT 대기 중: %s\n",
-               i, (int)delivered,
-               sigismember(&pending, SIGINT) ? "예" : "아니오");
-    }
+    printf("지금부터 5초간 SIGINT 를 막습니다. Ctrl+C 를 눌러 보세요.\n");
+    sleep(5);   /* 이 5초 동안 SIGINT 가 와도 핸들러가 즉시 실행되지 않고 커널에 대기(pending) 상태로 쌓인다 */
+    printf("5초 경과. 눌렀는지 여부: %s\n", got ? "전달됨" : "아직 대기 중");
 
-    printf("막기를 풉니다 (SIG_SETMASK 로 원래 마스크 복원)\n");
-    /* 이 호출이 끝나기 전에 대기 중이던 SIGINT 가 전달되고 핸들러가 실행됩니다 */
-    sigprocmask(SIG_SETMASK, &old, NULL);
+    /* 원래 마스크로 되돌린다 — 이 순간 대기 중이던 SIGINT 가 전달된다. */
+    sigprocmask(SIG_SETMASK, &old, NULL);   /* 세 번째 인자 NULL: 지금 마스크(=old)는 저장할 필요 없다 */
 
-    printf("풀린 뒤 핸들러 실행 횟수: %d회\n", (int)delivered);
+    printf("막기를 풀었습니다. 대기 중이던 시그널: %s\n", got ? "처리됨" : "없었음");
     return 0;
 }
