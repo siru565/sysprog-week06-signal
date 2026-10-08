@@ -17,12 +17,12 @@
 #include <unistd.h>
 
 /* 핸들러와 main 이 함께 보는 변수. 중간에 바뀔 수 있으므로 volatile 을 붙인다. */
-static volatile sig_atomic_t got_sigint = 0;
+static volatile sig_atomic_t got_sigint_count = 0;
 
 static void handler(int sig)
 {
     (void)sig;        /* 인자를 쓰지 않을 때 경고를 막는 관용적 표현 */
-    got_sigint = 1;   /* 플래그만 켠다 — printf 같은 함수는 여기서 부르지 않는다 */
+    got_sigint_count += 1;   /* 플래그만 켠다 — printf 같은 함수는 여기서 부르지 않는다 */
 }
 
 int main(void)
@@ -37,11 +37,14 @@ int main(void)
         return 1;
     }
 
-    printf("Ctrl+C 를 누르면 종료합니다 (PID %d)\n", getpid());
+    printf("Ctrl+C 를 3회 누르면 종료합니다 (PID %d)\n", getpid());
 
-    while (!got_sigint)   /* 플래그가 켜질 때까지 기다린다 */
+    while (got_sigint_count < 3) {
+        /* 플래그가 켜질 때까지 기다린다 */
         pause();          /* 시그널이 올 때까지 잠들어 있는다(CPU 를 쓰지 않는다). 시그널이 오면 깨어나 루프 조건을 다시 검사 */
-
-    printf("\nSIGINT 를 받았습니다. 정리하고 종료합니다.\n");
+        if (got_sigint_count < 3)
+            printf("%d회 받았습니다\n", got_sigint_count);
+    }
+    printf("\nSIGINT 를 3회 받았습니다. 정리하고 종료합니다.\n");
     return 0;
 }
