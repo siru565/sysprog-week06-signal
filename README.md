@@ -21,21 +21,18 @@ make
 
 (설명)
 
-![1_sigint3 코드](screenshots/1_sigint3_code.png)
 ![1_sigint3 실행](screenshots/1_sigint3.png)
 
 ## 2. alarm — N초마다 M번 울리는 타이머
 
 (설명)
 
-![alarm 코드](screenshots/alarm_code.png)
 ![alarm 실행](screenshots/alarm.png)
 
 ## 3. 3_signal_block2 — 막았다 풀기
 
 (설명 / 관찰 결과)
 
-![3_signal_block2 코드](screenshots/3_signal_block2_code.png)
 ![3_signal_block2 실행](screenshots/3_signal_block2.png)
 
 ---
