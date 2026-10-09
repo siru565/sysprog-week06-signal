@@ -33,7 +33,7 @@ make
 
 (설명 / 관찰 결과)
 
-![3_signal_block2 실행](screenshots/3_signal_block2.png)
+![3_signal_block2 실행](screenshots/3_signal_block2_run.png)
 
 ---
 
