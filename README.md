@@ -6,7 +6,7 @@
 |---|---|---|
 | `1_sigint3.c` | `original/1_sigint.c` | Ctrl+C 를 세 번 눌러야 종료 |
 | `alarm.c` | `original/2_alarm.c` | `./alarm <간격초> <반복횟수>` 반복 타이머 |
-| `3_signal_block2.c` | `original/3_signal_block.c` | SIGINT 를 5초 막았다 풀기 + 관찰 |
+| `3_signal_block2.c` | `original/3_signal_block.c` | SIGINT 를 5초 막았다 풀기 / 횟수 보이게 변경 |
 
 ## 빌드 / 실행 (WSL2)
 
@@ -19,7 +19,16 @@ make
 
 ## 1. 1_sigint3 — Ctrl+C 세 번에 종료
 
-(설명)
+``` 1번 과제 / 변경점
+1. got_sigint = 0 을 got_sigint_count = 0 으로 변수이름 변경 / 한번 온걸 확인하는것이 아닌 몇 번 왓는지 카운트 하기 위해 알아보기 쉽게 변경
+2. 핸들러 got_sigint = 1; 을 got_sigint_count += 1; 로 변경 / 한번 올때마다 횟수를 새게 함
+3. while (!got_sigint)        /     while (got_sigint_count < 3) {          3이 될때까지 반복
+        pause();                        pause();                            pause() 가 돌아온 직후에 횟수를 출력 하도록 함
+                                        if (got_sigint_count < 3)
+                                            printf(...); //횟수출력
+                                    }
+4.  printf("\nSIGINT 를 3회 받았습니다. 정리하고 종료합니다.\n"); // 종료 메시지에 몇 회 받았는지 횟수 출력 후 종료하게 함
+```
 
 ![1_sigint3 실행](screenshots/1_sigint3.png)
 
