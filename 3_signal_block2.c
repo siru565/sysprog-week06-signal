@@ -17,7 +17,7 @@
 
 static volatile sig_atomic_t got = 0;
 
-static void handler(int sig) { (void)sig; got = 1; }
+static void handler(int sig) { (void)sig; got += 1; }
 
 int main(void)
 {
@@ -44,6 +44,6 @@ int main(void)
     /* 원래 마스크로 되돌린다 — 이 순간 대기 중이던 SIGINT 가 전달된다. */
     sigprocmask(SIG_SETMASK, &old, NULL);   /* 세 번째 인자 NULL: 지금 마스크(=old)는 저장할 필요 없다 */
 
-    printf("막기를 풀었습니다. 대기 중이던 시그널: %s\n", got ? "처리됨" : "없었음");
+    printf("막기를 풀었습니다. 대기 중이던 시그널: %d회 %s\n", got, got ? "처리됨" : "없었음");
     return 0;
 }
