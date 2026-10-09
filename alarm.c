@@ -13,41 +13,39 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <stdlib.h>
 
-static volatile sig_atomic_t timeout = 0;
+static volatile sig_atomic_t timeout = 0; // 핸들러
+int count;
+int repeat;
 
 static void on_alarm(int sig)
 {
     (void)sig;
-    timeout = 1;
+    timeout += 1;
+    if (timeout < repeat)
+        alarm(count);
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    count = atoi(argv[1]);
+    repeat = atoi(argv[2]);
+
     struct sigaction sa;
     sa.sa_handler = on_alarm;   /* SIGALRM 이 오면 이 함수를 부르게 등록한다 */
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;   /* SA_RESTART 를 안 줬으므로, 이 시그널은 fgets 같은 블로킹 호출을 중단시킨다 */
+    sa.sa_flags = 0;
     sigaction(SIGALRM, &sa, NULL);
 
-    alarm(3);   /* 3초 뒤 SIGALRM 예약 */
-    printf("3초 안에 한 줄 입력하세요: ");
-    fflush(stdout);   /* 프롬프트를 즉시 보이게 한다(버퍼에 남지 않도록) */
+    alarm(count);   /* count초 뒤 SIGALRM 예약 */
+    printf("알람 시작\n");
 
-    char buf[64];
-    /*
-     * 시그널이 오면 읽는 중이던 read/fgets 가 중단되고 NULL 을 준다.
-     * 그때 timeout 플래그로 "시간 초과"인지 "진짜 입력 끝"인지 구분한다.
-     */
-    if (fgets(buf, sizeof buf, stdin) == NULL) {   /* SIGALRM 에 중단됐거나 EOF 를 만난 경우 */
-        if (timeout)
-            printf("\n시간이 끝났습니다 (SIGALRM).\n");
-        else
-            printf("\n입력이 끝났습니다.\n");
-        return 0;
+    while  (timeout < repeat) {
+        pause();
+        printf("%d번째 알람 (%d초 경과)\n", timeout, timeout * count);
     }
 
-    alarm(0);   /* 입력을 받았으니 예약을 취소한다 */
-    printf("입력받음: %s", buf);
+    printf("타이머 종료\n");
     return 0;
 }
